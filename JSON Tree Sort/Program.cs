@@ -38,7 +38,8 @@ namespace JSON_Tree_Sort
 
     }
 
-    public class ErrorHandling {
+    public class ErrorHandling
+    {/*I kept the error handling as a seperate class for readability and testing, making it more obvious whats going on*/
         public ErrorHandling() { }   
         public ErrorHandling(List<Json_Output> TreeToCheck) {
             RootErrorHandling(TreeToCheck);
@@ -73,8 +74,7 @@ namespace JSON_Tree_Sort
 
 
         }
-        public void ChildErrorHandling(List<Json_Output> TreeCheck) {
-            
+        public void ChildErrorHandling(List<Json_Output> TreeCheck) {     
             try {
                 string TopId = "";
                     foreach (Json_Output Node in TreeCheck)
@@ -96,8 +96,6 @@ namespace JSON_Tree_Sort
                 Console.ReadLine();
                 System.Environment.Exit(1);
             }
-
-
         }
         public void TreeIsTreeHandling(List<Json_Output> TreeCheck) {
             int CountTree = 0;
@@ -139,7 +137,6 @@ namespace JSON_Tree_Sort
         List<Json_Output> arraylistinput;
         string filename = "";
         string parentnode = "";
-      //  int parentnodeloc = 0;
         int depth;
         List<int> nodeloc = new List<int>();
         List<string> children = new List<string>();
@@ -150,19 +147,26 @@ namespace JSON_Tree_Sort
             string readline;
             Match Match;
             string MatchString;
+            StreamReader read;
             Regex Trunc = new Regex("],.*]$",RegexOptions.Singleline);
             filename = filelocation;
-            StreamReader read = new StreamReader(filelocation);
-            readline = read.ReadToEnd();
-            readline.Trim();
-            Match = Trunc.Match(readline);
-            MatchString = Match.Value;
-            MatchString = Regex.Replace(MatchString, "[^0-9-]+", "");
-            readline = Regex.Replace(readline, @"][\s\S]*]$", "]");
-            readline = Regex.Replace(readline, @"[[\s\S]*\[", "[");
-            depth = Int32.Parse(MatchString);
+
             try
             {
+                read = new StreamReader(filelocation);
+            
+            
+
+                readline = read.ReadToEnd();
+                readline.Trim();
+                Match = Trunc.Match(readline);
+                MatchString = Match.Value;
+                MatchString = Regex.Replace(MatchString, "[^0-9-]+", "");
+                readline = Regex.Replace(readline, @"][\s\S]*]$", "]");/*Regex to remove the extra brackets 
+                                                                         and the depth parameter from each file read*/
+                readline = Regex.Replace(readline, @"[[\s\S]*\[", "[");
+                depth = Int32.Parse(MatchString);
+
                 arraylistinput = (List<Json_Output>)JsonConvert.DeserializeObject(readline, typeof(List<Json_Output>));
             }
             catch (Newtonsoft.Json.JsonReaderException e) {
@@ -171,15 +175,28 @@ namespace JSON_Tree_Sort
                 System.Environment.Exit(1);
 
             }
-            if(depth > 0)
+            catch (Exception e)
+            {
+
+                Console.WriteLine("File Not Found: " + e.Message);
+                Console.ReadLine();
+                System.Environment.Exit(1);
+            }
+
+
+            if (depth > 0)
             handler = new ErrorHandling(arraylistinput);
             
         }
 
         public void File_Write() {          
             string jsonout = JsonConvert.SerializeObject(arraylistoutput);
-            jsonout = Regex.Replace(jsonout, ",", ",\n");
+            jsonout = Regex.Replace(jsonout, ",", ",\n"); /*replace the commas with carrage returns for readability
+                                                            maybe add in some more output formatting in the future to get
+                                                            it as close to the input as possible
+                                                          */
             StreamWriter fileout = new StreamWriter(filename + "output.json");
+            if(arraylistoutput != null)
             fileout.WriteLine(jsonout);
             fileout.Close();
         }
@@ -187,13 +204,14 @@ namespace JSON_Tree_Sort
         public void Build() {
             switch (depth)
             {
-
+                /*error checking is done after file read to reduce code duplication, I could probably abstract some of the loops too*/
                 case 0:
-                    arraylistoutput = null;
-                break; //empty
+                    arraylistoutput = null;/*Its not quite empty but the output file should be*/
+                    break; 
 
-                case 1:
-                    
+                case 1:/*Mode that selects only the top level node and its children, 
+                        spec wasn't clear if I should include the top level childrens children but I did it anyway*/
+
                     for (int i = 0; i < arraylistinput.Count(); i++) {
                         if (arraylistinput[i].parentId == null) {
                             parentnode = arraylistinput[i].id;
@@ -219,9 +237,9 @@ namespace JSON_Tree_Sort
                         children.Clear();
                     }
 
-                break;  //top level
+                break; 
 
-                case 2:
+                case 2: /*the whole tree*/
                     arraylistoutput = arraylistinput;
                     for (int i = 0; i < arraylistoutput.Count(); i++)
                     {
@@ -245,6 +263,9 @@ namespace JSON_Tree_Sort
                 default:
                     if (depth < 0)//no limits
                     {
+                        /*no limits truly means no limits, theres no sanity checking and if everything parsed fine then the 
+                         * code will operate on the entire tree, even if its broken or incomplete 
+                         */
                         arraylistoutput = arraylistinput;
                         for (int i = 0; i < arraylistoutput.Count(); i++)
                         {
@@ -276,9 +297,12 @@ namespace JSON_Tree_Sort
     {
         private static void Main(string[] args)
         {
-            Operations FileOp = new Operations();
+            Operations FileOp = new Operations(); 
             string fileloc;
-            if (args.Length == 0)
+                /*at first I was thinking of taking the two inputs seperatly but after
+                seeing all the files were in the same format, just reading that felt like a much better UX */
+            if (args.Length == 0) /*the program exe will take a file dragged onto it as input,
+                                    returning a file in the same location if it can perform valid operations on it*/ 
             {
                 Console.WriteLine("Location of Json File:");
                 fileloc = Console.ReadLine();
@@ -291,7 +315,8 @@ namespace JSON_Tree_Sort
 
             FileOp.Build();
             FileOp.File_Write();
-            string waitonexit = Console.ReadLine();
+            Console.WriteLine("Operation Completed");
+            Console.ReadLine();
 
         }
     }
