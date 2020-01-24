@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.IO;
 using System.Data;
+using System.Text.RegularExpressions;
 
 namespace JSON_Tree_Sort
 {
@@ -22,16 +23,27 @@ namespace JSON_Tree_Sort
         List<Json_Output> arraylistinput;
         string filename = "";
         string parentnode = "";
-        int parentnodeloc = 0;
-        List<int> childnodeloc = new List<int>();
+      //  int parentnodeloc = 0;
+        int depth;
+        List<int> nodeloc = new List<int>();
         List<string> children = new List<string>();
 
 
         public void File_Read(string filelocation) {
             string readline;
+            Match Match;
+            string MatchString;
+            Regex Trunc = new Regex("],.*]$",RegexOptions.Singleline);
             filename = filelocation;
             StreamReader read = new StreamReader(filelocation);
             readline = read.ReadToEnd();
+            readline.Trim();
+            Match = Trunc.Match(readline);
+            MatchString = Match.Value;
+            MatchString = Regex.Replace(MatchString, "[^0-9-]+", "");
+            readline = Regex.Replace(readline, @"][\s\S]*]$", "]");
+            readline = Regex.Replace(readline, @"[[\s\S]*\[", "[");
+            depth = Int32.Parse(MatchString);
             arraylistinput = (List<Json_Output>)JsonConvert.DeserializeObject(readline, typeof(List<Json_Output>));
         }
 
@@ -42,7 +54,7 @@ namespace JSON_Tree_Sort
             fileout.Close();
         }
 
-        public void Build(int depth) {
+        public void Build() {
             switch (depth)
             {
 
@@ -56,15 +68,28 @@ namespace JSON_Tree_Sort
 
                         if (arraylistinput[i].parentId == null) {
                             parentnode = arraylistinput[i].id;
-                            parentnodeloc = i;
+                            nodeloc.Add(i);
                             break;
                         }
                     }
                     for (int j = 0; j < arraylistinput.Count(); j++) {
-                        if (arraylistinput[j].parentId == arraylistinput[parentnodeloc].id) {
-                            children.Add(arraylistinput[j].id);
-                            childnodeloc.Add(j);
+                        if (arraylistinput[j].parentId == arraylistinput[nodeloc[0]].id) {
+                        //    children.Add(arraylistinput[j].id);
+                            nodeloc.Add(j);
                         }
+                    }
+                    foreach (int loc in nodeloc) {
+                        arraylistoutput.Add(arraylistinput[loc]);
+                    }
+
+                    for (int k = 0; k < arraylistoutput.Count(); k++) {
+                        for (int l = 0; l < arraylistinput.Count(); l++) {
+                            if (arraylistoutput[k].id == arraylistinput[l].parentId) {
+                                children.Add(arraylistinput[l].id);
+                            }
+                        }
+                        arraylistoutput[k].Children_ID = children.ToArray();
+                        children.Clear();
                     }
 
                 break;  //top level
@@ -104,23 +129,18 @@ namespace JSON_Tree_Sort
         {
             Operations FileOp = new Operations();
             string fileloc;
-            int depth = 0;
             if (args.Length == 0)
             {
                 Console.WriteLine("Location of Json File:");
                 fileloc = Console.ReadLine();
                 FileOp.File_Read(fileloc);
-                Console.WriteLine("Depth Parameter:");
-                depth = Convert.ToInt32(Console.ReadLine());
             }
             else {
                 fileloc = args[0];
                 FileOp.File_Read(fileloc);
-                Console.WriteLine("Depth Parameter:");
-                depth = Convert.ToInt32(Console.ReadLine());
             }
 
-            FileOp.Build(depth);
+            FileOp.Build();
             FileOp.File_Write();
             string waitonexit = Console.ReadLine();
 
