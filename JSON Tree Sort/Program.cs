@@ -38,6 +38,102 @@ namespace JSON_Tree_Sort
 
     }
 
+    public class ErrorHandling {
+        public ErrorHandling() { }   
+        public ErrorHandling(List<Json_Output> TreeToCheck) {
+            RootErrorHandling(TreeToCheck);
+            ChildErrorHandling(TreeToCheck);
+            TreeIsTreeHandling(TreeToCheck);
+
+        }
+        int ParentNode;
+        int TopLevelChildren;
+        public void RootErrorHandling(List<Json_Output> TreeCheck)
+        {
+            try
+            {
+                foreach (Json_Output NodeToCheck in TreeCheck) {
+                    if (NodeToCheck.parentId == null)
+                    {
+                        ParentNode++;
+                        if (ParentNode >= 2)
+                        {
+                            throw new MultipleParentNodeException("Found More Than One Node Without Parents");
+                        }
+                    }
+                }
+            }
+            catch (MultipleParentNodeException e)
+            {
+                Console.WriteLine("error handling data:" + e.Message);
+                Console.ReadLine();
+                System.Environment.Exit(1);
+
+            }
+
+
+        }
+        public void ChildErrorHandling(List<Json_Output> TreeCheck) {
+            
+            try {
+                string TopId = "";
+                    foreach (Json_Output Node in TreeCheck)
+                {
+                    if (Node.parentId == null) { TopId = Node.id; }
+                    if (Node.parentId == TopId)
+                    {
+                        TopLevelChildren++;
+                    }
+                    
+                }
+                if (TopLevelChildren == 0)
+                {
+                    throw new OrphanNodeException("Top Level Node Has No Children");
+                }
+
+            } catch (OrphanNodeException e) {
+                Console.WriteLine("error handling data:" + e.Message);
+                Console.ReadLine();
+                System.Environment.Exit(1);
+            }
+
+
+        }
+        public void TreeIsTreeHandling(List<Json_Output> TreeCheck) {
+            int CountTree = 0;
+            try
+            {
+                foreach (Json_Output node in TreeCheck)
+                {
+                    for (int i = 0; i < TreeCheck.Count(); i++)
+                    {
+                        if (node.parentId == TreeCheck[i].id)
+                        {
+                            CountTree++;
+                            break;
+                        }
+
+                    }
+
+                    if (node.parentId != null && CountTree == 0) {
+                        throw new OrphanNodeException("Node Is Not Part Of Tree");
+
+                    }
+                    CountTree = 0;
+                }
+            }
+            catch(OrphanNodeException e) {
+
+                Console.WriteLine("error handling data:" + e.Message);
+                Console.ReadLine();
+                System.Environment.Exit(1);
+
+            }
+
+
+        }
+    }
+
     public class Operations {
         List<Json_Output> arraylistoutput = new List<Json_Output>();
         List<Json_Output> arraylistinput;
@@ -47,6 +143,7 @@ namespace JSON_Tree_Sort
         int depth;
         List<int> nodeloc = new List<int>();
         List<string> children = new List<string>();
+        ErrorHandling handler;
 
 
         public void File_Read(string filelocation) {
@@ -74,18 +171,20 @@ namespace JSON_Tree_Sort
                 System.Environment.Exit(1);
 
             }
+            if(depth > 0)
+            handler = new ErrorHandling(arraylistinput);
             
         }
 
-        public void File_Write() {
-            StreamWriter fileout = new StreamWriter(filename + "output.json");
+        public void File_Write() {          
             string jsonout = JsonConvert.SerializeObject(arraylistoutput);
+            jsonout = Regex.Replace(jsonout, ",", ",\n");
+            StreamWriter fileout = new StreamWriter(filename + "output.json");
             fileout.WriteLine(jsonout);
             fileout.Close();
         }
 
         public void Build() {
-            int ParentNode = 0;
             switch (depth)
             {
 
@@ -96,11 +195,9 @@ namespace JSON_Tree_Sort
                 case 1:
                     
                     for (int i = 0; i < arraylistinput.Count(); i++) {
-
                         if (arraylistinput[i].parentId == null) {
                             parentnode = arraylistinput[i].id;
                             nodeloc.Add(i);
-                            break;
                         }
                     }
                     for (int j = 0; j < arraylistinput.Count(); j++) {
@@ -128,23 +225,6 @@ namespace JSON_Tree_Sort
                     arraylistoutput = arraylistinput;
                     for (int i = 0; i < arraylistoutput.Count(); i++)
                     {
-                        try
-                            {
-                                if (arraylistoutput[i].parentId == null)
-                                {
-                                    ParentNode++;
-                                    if (ParentNode >= 2)
-                                    {
-                                        throw new MultipleParentNodeException("Found More Than One Node Without Parents") ;
-                                    }
-                                }
-                            }
-                            catch (MultipleParentNodeException e) {
-                                Console.WriteLine("error handling data:" + e.Message);
-                                Console.ReadLine();
-                                System.Environment.Exit(1);
-
-                            }
 
                         for (int j = 0; j < arraylistoutput.Count(); j++)
                         {
@@ -184,6 +264,8 @@ namespace JSON_Tree_Sort
             }
 
         }
+
+        
         
 
     }
