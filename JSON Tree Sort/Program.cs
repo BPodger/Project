@@ -17,7 +17,7 @@ namespace JSON_Tree_Sort
         public string parentId { get; set; }
         public string[] Children_ID { get; set; }
     }
-
+    /*Multiple exceptions for extensibility and future additions*/
     public class FileParseException : Exception
     {
         public FileParseException() { }
@@ -56,7 +56,7 @@ namespace JSON_Tree_Sort
                 foreach (Json_Output NodeToCheck in TreeCheck) {
                     if (NodeToCheck.parentId == null)
                     {
-                        ParentNode++;
+                        ParentNode++; /*count to see if theres more than one node with no parents*/
                         if (ParentNode >= 2)
                         {
                             throw new MultipleParentNodeException("Found More Than One Node Without Parents");
@@ -98,6 +98,8 @@ namespace JSON_Tree_Sort
             }
         }
         public void TreeIsTreeHandling(List<Json_Output> TreeCheck) {
+            /*check to make sure all nodes are part of the same tree, 
+             *there are no orphan nodes that have parents that are not part of the tree*/
             int CountTree = 0;
             try
             {
