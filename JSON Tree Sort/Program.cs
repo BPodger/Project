@@ -18,6 +18,26 @@ namespace JSON_Tree_Sort
         public string[] Children_ID { get; set; }
     }
 
+    public class FileParseException : Exception
+    {
+        public FileParseException() { }
+        public FileParseException(string message) : base(message) { }
+
+    }
+
+    public class MultipleParentNodeException : Exception {
+        public MultipleParentNodeException() { }
+        public MultipleParentNodeException(string message) :base(message) { }
+
+    }
+
+    public class OrphanNodeException : Exception
+    {
+        public OrphanNodeException() { }
+        public OrphanNodeException(string message) : base(message) { }
+
+    }
+
     public class Operations {
         List<Json_Output> arraylistoutput = new List<Json_Output>();
         List<Json_Output> arraylistinput;
@@ -44,7 +64,17 @@ namespace JSON_Tree_Sort
             readline = Regex.Replace(readline, @"][\s\S]*]$", "]");
             readline = Regex.Replace(readline, @"[[\s\S]*\[", "[");
             depth = Int32.Parse(MatchString);
-            arraylistinput = (List<Json_Output>)JsonConvert.DeserializeObject(readline, typeof(List<Json_Output>));
+            try
+            {
+                arraylistinput = (List<Json_Output>)JsonConvert.DeserializeObject(readline, typeof(List<Json_Output>));
+            }
+            catch (Newtonsoft.Json.JsonReaderException e) {
+                Console.WriteLine("error handling file input:" + e.Message);
+                Console.ReadLine();
+                System.Environment.Exit(1);
+
+            }
+            
         }
 
         public void File_Write() {
@@ -55,6 +85,7 @@ namespace JSON_Tree_Sort
         }
 
         public void Build() {
+            int ParentNode = 0;
             switch (depth)
             {
 
@@ -74,7 +105,6 @@ namespace JSON_Tree_Sort
                     }
                     for (int j = 0; j < arraylistinput.Count(); j++) {
                         if (arraylistinput[j].parentId == arraylistinput[nodeloc[0]].id) {
-                        //    children.Add(arraylistinput[j].id);
                             nodeloc.Add(j);
                         }
                     }
@@ -94,11 +124,48 @@ namespace JSON_Tree_Sort
 
                 break;  //top level
 
-                case 2: break;
+                case 2:
+                    arraylistoutput = arraylistinput;
+                    for (int i = 0; i < arraylistoutput.Count(); i++)
+                    {
+                        try
+                            {
+                                if (arraylistoutput[i].parentId == null)
+                                {
+                                    ParentNode++;
+                                    if (ParentNode >= 2)
+                                    {
+                                        throw new MultipleParentNodeException("Found More Than One Node Without Parents") ;
+                                    }
+                                }
+                            }
+                            catch (MultipleParentNodeException e) {
+                                Console.WriteLine("error handling data:" + e.Message);
+                                Console.ReadLine();
+                                System.Environment.Exit(1);
+
+                            }
+
+                        for (int j = 0; j < arraylistoutput.Count(); j++)
+                        {
+                            
+                            if (arraylistoutput[j].parentId == arraylistoutput[i].id)
+                            {
+                                children.Add(arraylistoutput[j].id);
+                            }
+                        }
+                        arraylistoutput[i].Children_ID = children.ToArray();
+                        children.Clear();
+                    }
+
+
+
+
+                    break;
                 default:
                     if (depth < 0)//no limits
                     {
-                        arraylistoutput = arraylistinput.ToList();
+                        arraylistoutput = arraylistinput;
                         for (int i = 0; i < arraylistoutput.Count(); i++)
                         {
                             
@@ -161,4 +228,8 @@ GOALS:
     3. convert back into json and output the file in the same location
         -serialise object array into Json string
         -filewriter to location of read object    
+    4. add exception handling and data checks
+        -file in right format for conversion
+        -data sanity checks (one root node, root node has children, child node parents are a part of the tree)
+        -data checks not needed for -1 since its 'without limit'
 */
